@@ -25,6 +25,7 @@ app.get('/health', (req, res) => {
 
 // Mount routers
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/tickets', require('./routes/ticketRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
