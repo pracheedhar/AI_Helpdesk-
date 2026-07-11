@@ -90,13 +90,17 @@ exports.generateSuggestedReply = async (ticket, comments = []) => {
     .map(c => `${c.userId?.name || 'User'} (${c.userId?.role || 'user'}): ${c.comment}`)
     .join('\n');
 
-  if (!openai) {
+  const getFallbackReply = () => {
     return `Hi ${ticket.createdBy?.name || 'Customer'},\n\nThank you for reaching out regarding "${ticket.title}". We have categorized this as a ${ticket.category} issue and assigned it a priority of ${ticket.priority}.\n\nAn agent will investigate your ticket details shortly.\n\nBest regards,\nSupport Team`;
+  };
+
+  if (!openai) {
+    return getFallbackReply();
   }
 
   try {
-    const prompt = `You are an expert customer support agent. Generate a concise, polite, and helpful suggested reply for the agent to send.
-    
+    const prompt = `You are an expert customer support engineer. Based on the ticket details and discussion below, analyze the issue and provide a concrete, step-by-step technical solution or troubleshooting advice. Then, present a polite draft reply containing this resolution that the support agent can send directly to the customer.
+
     Ticket Title: "${ticket.title}"
     Description: "${ticket.description}"
     Current Status: "${ticket.status}"
@@ -106,25 +110,35 @@ exports.generateSuggestedReply = async (ticket, comments = []) => {
     Conversation History:
     ${contextText}
 
-    Provide the draft reply directly without quotes, intros or explanation. Keep it friendly and professional.`;
+    Please construct your response with two clear sections:
+    1. **TECHNICAL ANALYSIS & SOLUTION**: Clear explanation of the cause and a list of steps to resolve the issue.
+    2. **DRAFT RESPONSE**: A friendly, ready-to-send support email response containing those solution steps.`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
+      temperature: 0.5,
     });
 
     return response.choices[0].message.content.trim();
   } catch (error) {
-    console.error('OpenAI reply error:', error.message);
-    return 'Thank you for your patience. We are reviewing your request and will get back to you shortly.';
+    console.error('OpenAI reply error:', error.message, 'Falling back to offline helper.');
+    return getFallbackReply();
   }
 };
 
+
 // @desc    AI conversation summarization
 exports.generateSummary = async (ticket, comments = []) => {
+  const getFallbackSummary = () => {
+    if (comments.length === 0) {
+      return `Ticket "${ticket.title}" opened. No comment discussion has occurred yet. Description: ${ticket.description.slice(0, 100)}...`;
+    }
+    return `Summary (Offline Copilot): Ticket focuses on "${ticket.title}" (${ticket.category}). The thread contains ${comments.length} message updates. Latest status is set to "${ticket.status.toUpperCase()}".`;
+  };
+
   if (comments.length === 0) {
-    return `Ticket "${ticket.title}" opened. No comment discussion has occurred yet. Description: ${ticket.description.slice(0, 100)}...`;
+    return getFallbackSummary();
   }
 
   const contextText = comments
@@ -132,7 +146,7 @@ exports.generateSummary = async (ticket, comments = []) => {
     .join('\n');
 
   if (!openai) {
-    return `Summary (Heuristic): Ticket focuses on "${ticket.title}". Discussion includes ${comments.length} updates. Latest status is ${ticket.status}.`;
+    return getFallbackSummary();
   }
 
   try {
@@ -152,8 +166,8 @@ exports.generateSummary = async (ticket, comments = []) => {
 
     return response.choices[0].message.content.trim();
   } catch (error) {
-    console.error('OpenAI summarizer error:', error.message);
-    return 'Summary unavailable at this time due to processing difficulties.';
+    console.error('OpenAI summarizer error:', error.message, 'Falling back to offline helper.');
+    return getFallbackSummary();
   }
 };
 
