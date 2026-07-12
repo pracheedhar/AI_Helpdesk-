@@ -1,127 +1,207 @@
 # AI-Powered Helpdesk System
 
-A complete AI-assisted customer support ticketing system featuring a React client, an Express server, JWT authentication, and AI classification & reply suggestions using OpenAI.
+A full-stack customer support ticketing system powered by React, Express, MongoDB, and OpenAI. Supports JWT authentication, role-based access control (User / Agent / Admin), and AI-driven ticket classification, reply suggestions, conversation summaries, and duplicate detection.
+
+## Live Demo Architecture
+
+```
+[ React (Vite) on Vercel ] ──HTTPS──▶ [ Express API on Render ] ──▶ [ MongoDB Atlas ]
+                                              │
+                                              └──▶ [ OpenAI API (optional) ]
+```
+
+---
 
 ## Features
 
-- **User Authentication**: Secure signup and login for both regular Users and Support Agents/Administrators using JWT.
-- **Ticket Management**: Create, view, update status (open, in progress, resolved), and set priority/category of helpdesk tickets.
-- **AI-Powered Ticket Analysis**:
-  - Automatically predicts categories and priorities.
-  - Automatically generates suggested replies for support agents based on ticket context and conversation log.
-  - Generates summaries of ticket comment logs.
-- **Simulated Attachments**: Support for adding and viewing file attachments (mocked links stored in DB).
-- **Duplicate Detection**: Auto-detects potential duplicate tickets using text similarity heuristics.
+| Feature | Details |
+|---|---|
+| **Authentication** | JWT-based login & registration with bcrypt password hashing |
+| **Role-Based Access** | Three roles: `user`, `agent`, `admin` — each with scoped permissions |
+| **Ticket Management** | Create, view, update status (`open`, `in-progress`, `resolved`, `closed`), set priority & category |
+| **AI Classification** | Auto-predicts category & priority on ticket creation (OpenAI GPT-3.5 or rule-based fallback) |
+| **AI Reply Suggestions** | Generates a step-by-step resolution draft for agents |
+| **AI Summarization** | Summarizes the comment thread of a ticket |
+| **Duplicate Detection** | Detects similar open tickets using Jaccard similarity |
+| **Attachments** | Attach file links to tickets (URL-based) |
+| **Comments** | Nested comment threads per ticket |
 
 ---
 
-## Directory Structure
+## Tech Stack
 
-```text
-├── backend/            # Express.js Server
-│   ├── src/
-│   │   ├── config/     # DB configurations
-│   │   ├── controllers/# Route controllers (auth, tickets, comments, etc.)
-│   │   ├── middleware/ # Auth & error handling middleware
-│   │   ├── models/     # Mongoose Schemas (User, Ticket, Comment, etc.)
-│   │   ├── routes/     # Express route handlers
-│   │   ├── services/   # AI services (OpenAI Integration)
-│   │   └── server.js   # Server entry point
-│   └── package.json
+**Frontend** (in `/client`):
+- React 19 + Vite 8
+- React Router v7
+- Axios (with JWT interceptor)
+- Tailwind CSS v4
+- Lucide React icons
+
+**Backend** (in `/backend`):
+- Node.js + Express
+- MongoDB + Mongoose
+- JSON Web Tokens (JWT)
+- bcryptjs
+- OpenAI SDK (with offline fallback)
+- dotenv, cors
+
+---
+
+## Project Structure
+
+```
+AI_Helpdesk-/
+├── .gitignore
+├── README.md
 │
-└── client/             # Vite + React Client SPA
-    ├── src/
-    │   ├── assets/     # Images and static assets
-    │   ├── components/ # Shared React components (insights panel, cards, etc.)
-    │   ├── context/    # Global Context providers (AuthContext)
-    │   ├── pages/      # Route pages (Dashboard, Login, Ticket Details)
-    │   ├── main.jsx    # Application entry point
-    │   └── index.css   # Main styles and design system variables
-    ├── index.html
-    └── package.json
+├── backend/
+│   ├── .env.example             # Environment variable template
+│   ├── package.json
+│   └── src/
+│       ├── server.js            # Entry point (Express app)
+│       ├── config/db.js         # MongoDB connection
+│       ├── middleware/
+│       │   └── authMiddleware.js
+│       ├── models/
+│       │   ├── User.js
+│       │   ├── Ticket.js
+│       │   ├── Comment.js
+│       │   └── Attachment.js
+│       ├── controllers/
+│       │   ├── authController.js
+│       │   ├── ticketController.js
+│       │   ├── commentController.js
+│       │   └── attachmentController.js
+│       ├── routes/
+│       │   ├── authRoutes.js
+│       │   └── ticketRoutes.js
+│       └── services/
+│           └── aiService.js     # OpenAI integration with fallback
+│
+└── client/
+    ├── .env.example             # Environment variable template
+    ├── vite.config.js           # Dev proxy: /api → localhost:5001
+    ├── package.json
+    └── src/
+        ├── context/AuthContext.jsx  # Auth state + Axios instance
+        ├── components/
+        ├── pages/
+        └── main.jsx
 ```
 
 ---
 
-## Getting Started
+## Local Development Setup
 
 ### Prerequisites
+- [Node.js](https://nodejs.org/) v18+
+- [MongoDB](https://www.mongodb.com/) running locally or a [MongoDB Atlas](https://www.mongodb.com/atlas) cluster
+- (Optional) [OpenAI API Key](https://platform.openai.com/) — rule-based fallback is used if omitted
 
-- [Node.js](https://nodejs.org/) (v16+ recommended)
-- [MongoDB](https://www.mongodb.com/) (running locally or in the cloud via MongoDB Atlas)
-- (Optional) [OpenAI API Key](https://platform.openai.com/) for AI features (will fall back to rule-based logic if not provided)
-
----
-
-### Installation & Local Setup
-
-#### 1. Clone the repository
+### 1. Clone the repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/pracheedhar/AI_Helpdesk-.git
 cd AI_Helpdesk-
 ```
 
-#### 2. Configure Environment Variables
-Copy the env template files and update the configuration secrets.
-
-**For Backend:**
+### 2. Configure the backend
 ```bash
 cd backend
 cp .env.example .env
 ```
-Update `.env` with your database URI, JWT secret, and OpenAI API key:
+Edit `backend/.env`:
 ```env
+PORT=5001
+NODE_ENV=development
 MONGO_URI=mongodb://localhost:27017/ai_helpdesk
-JWT_SECRET=your_jwt_signing_secret
-OPENAI_API_KEY=your_openai_api_key
+JWT_SECRET=your_secure_random_secret
+FRONTEND_URL=http://localhost:3000
+# OPENAI_API_KEY=your_openai_api_key
 ```
 
-**For Client:**
+### 3. Configure the frontend
 ```bash
 cd ../client
 cp .env.example .env
 ```
-Keep `VITE_API_BASE=/api` if you'd like Vite's development proxy to forward your API requests to the backend server.
+`client/.env` (default works out-of-the-box with Vite proxy):
+```env
+VITE_API_BASE=/api
+```
 
----
-
-### Running the Application (Local Development)
-
-#### Start the Backend Server:
+### 4. Run the backend
 ```bash
 cd backend
 npm install
 npm run dev
 ```
-The server will start running on `http://localhost:5001`.
+Server starts at `http://localhost:5001`
 
-#### Start the Frontend Client:
-```bash
-cd ../client
-npm install
-npm run dev
-```
-The client app will start running on `http://localhost:3000`.
-
----
-
-## Production Deployment
-
-### 1. Build the client assets
+### 5. Run the frontend
 ```bash
 cd client
-npm run build
+npm install
+npm run dev
 ```
-This generates static production bundle files in `client/dist`.
+App opens at `http://localhost:3000` (Vite proxies `/api/*` to the backend automatically)
 
-### 2. Run the Express server in Production Mode
-The Express server has been configured to serve the built static client files when running in production mode. Set your environment variable:
-```env
-NODE_ENV=production
-```
-Then start the server:
-```bash
-cd backend
-npm start
-```
-The backend server will host both the API and the static React app.
+---
+
+## API Reference
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/api/auth/register` | Public | Register new user |
+| `POST` | `/api/auth/login` | Public | Login and get JWT |
+| `GET` | `/api/auth/me` | Private | Get current user |
+| `GET` | `/api/tickets` | Private | List tickets (scoped by role) |
+| `POST` | `/api/tickets` | Private | Create a ticket |
+| `GET` | `/api/tickets/:id` | Private | Get a single ticket |
+| `PUT` | `/api/tickets/:id` | Private | Update ticket |
+| `DELETE` | `/api/tickets/:id` | Admin | Delete ticket |
+| `PATCH` | `/api/tickets/:id/status` | Agent/Admin | Update status |
+| `PATCH` | `/api/tickets/:id/assign` | Admin | Assign ticket to agent |
+| `GET` | `/api/tickets/agents` | Admin | List all agents |
+| `POST` | `/api/tickets/:id/comments` | Private | Add comment |
+| `GET` | `/api/tickets/:id/comments` | Private | Get comments |
+| `POST` | `/api/tickets/:id/attachments` | Private | Add attachment |
+| `GET` | `/api/tickets/:id/attachments` | Private | Get attachments |
+| `GET` | `/api/tickets/:id/ai-summary` | Private | AI summary of ticket |
+| `GET` | `/api/tickets/:id/ai-suggested-reply` | Agent/Admin | AI draft reply |
+| `GET` | `/api/tickets/:id/ai-duplicates` | Private | Find duplicate tickets |
+| `GET` | `/health` | Public | Health check |
+
+---
+
+## Environment Variables Reference
+
+### Backend (`backend/.env`)
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `PORT` | No | `5001` | Port to run the server |
+| `NODE_ENV` | Yes | `development` | `development` or `production` |
+| `MONGO_URI` | Yes | — | MongoDB connection string |
+| `JWT_SECRET` | Yes | — | Secret for signing tokens |
+| `FRONTEND_URL` | No | `*` (all origins) | Allowed CORS origin |
+| `OPENAI_API_KEY` | No | — | OpenAI key (uses fallback if omitted) |
+| `SERVE_STATIC` | No | — | Set to `true` for monolithic deploy only |
+
+### Frontend (`client/.env`)
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `VITE_API_BASE` | No | `/api` | Full backend API URL for production |
+
+> In development, leave `VITE_API_BASE=/api` — Vite's proxy handles forwarding to `localhost:5001`.
+> In production on Vercel, set it to the full Render backend URL.
+
+---
+
+## User Roles
+
+| Role | Permissions |
+|---|---|
+| `user` | Create and view their own tickets; add comments and attachments |
+| `agent` | View all tickets; update status; add comments; access AI tools |
+| `admin` | All of the above + assign tickets, delete tickets, manage users |

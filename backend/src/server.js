@@ -1,14 +1,15 @@
+const dotenv = require('dotenv');
+// Load env vars FIRST before any other imports that may use them
+dotenv.config();
+
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
+const path = require('path');
+
 const connectDB = async () => {
-  // We require this dynamically or directly
   const connect = require('./config/db');
   await connect();
 };
-
-// Load env vars
-dotenv.config();
 
 const app = express();
 
@@ -16,7 +17,9 @@ const app = express();
 app.use(express.json());
 
 // Enable CORS
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*'
+}));
 
 // Health Check
 app.get('/health', (req, res) => {
@@ -35,10 +38,9 @@ app.use((err, req, res, next) => {
     message: err.message || 'Internal Server Error',
   });
 });
-const path = require('path');
 
-// Serve static assets in production
-if (process.env.NODE_ENV === 'production') {
+// Serve static assets in production (only for monolithic deployment)
+if (process.env.NODE_ENV === 'production' && process.env.SERVE_STATIC === 'true') {
   app.use(express.static(path.join(__dirname, '../../client/dist')));
   app.get('*', (req, res) => {
     res.sendFile(path.resolve(__dirname, '../../client/dist', 'index.html'));
